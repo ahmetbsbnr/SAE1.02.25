@@ -168,9 +168,6 @@ Au lancement : saisie de `L` et `C` (impairs), choix du mode (Humain/Humain, Hum
 ```
 SAE1.02.25/
 ├── MEMORYX.c        # Code principal du jeu
-├── chrono.c         # Chronométrage
-├── color.c          # Couleurs terminal
-├── nb_aleatoire.c   # Générateur aléatoire
 └── README.md        # Ce document
 ```
 
