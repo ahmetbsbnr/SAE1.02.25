@@ -1,51 +1,30 @@
-# 🎴 MÉMORYX - Jeu de Memory en C
+# 🎴 MÉMORYX - SAE 1.02 / 1.2
 
-## 📋 Description du Projet
-
-**Mémoryx** est une variante du jeu de mémoire classique (Memory) développée en langage C dans le cadre de la SAE 1.02 (2025/2026). Le but du jeu est de retrouver des paires de cartes identiques sur un plateau.
+Documentation consolidée pour le projet **Mémoryx** (SAE 1.02 / 2025-2026) 
 
 ---
 
-## 🎯 Objectif du Jeu
+## 🎯 Objectifs et modes
 
-Le gagnant est celui qui découvre le **plus grand nombre de paires** de cartes identiques.
-
-### Règles de Base
-
-1. Les cartes sont disposées **faces cachées** sur un plateau rectangulaire
-2. À chaque tour, un joueur retourne **deux cartes** :
-   - ✅ **Paire trouvée** : Le joueur marque **1 point** et **rejoue**
-   - ❌ **Pas de paire** : Les cartes sont retournées faces cachées, le joueur suivant joue
+- **Duel** : gagner en découvrant le plus de paires.
+- **Solitaire** : trouver toutes les paires en un minimum de temps.
+- Modes prévus : Humain/Humain, Humain/Bot, Solitaire (ordre de passage configurable).
 
 ---
 
-## 🃏 Particularité : Le Joker
+## ⚙️ Paramètres et contraintes du plateau
 
-Mémoryx ajoute une carte spéciale : **le Joker** (valeur `0`)
+- Plateau de **L lignes** × **C colonnes** avec `L` et `C` impairs, `L × C = 2n + 1` (n paires + 1 Joker), cas `1×1` interdit.
+- Nombre de paires : $n = \frac{L \times C - 1}{2}$.
+- Conversion position ↔ coordonnées (stockage 1D) :
+  - ligne = position div C
+  - colonne = position mod C
+  - position = ligne × C + colonne
 
-| Événement | Conséquence |
-|-----------|-------------|
-| Un joueur retourne le Joker | Il **passe son tour** immédiatement |
-| Après le passage de tour | Le Joker est **déplacé secrètement** à une autre position aléatoire |
+### Exemples de dimensions valides
 
----
-
-## 📐 Structure du Plateau
-
-### Dimensions
-
-Le plateau forme un rectangle de **L lignes × C colonnes** avec les contraintes suivantes :
-
-| Contrainte | Explication |
-|------------|-------------|
-| `L × C = 2n + 1` | Nombre total de cartes (n paires + 1 Joker) |
-| L et C **impairs** | Obligatoire pour avoir un nombre impair de cartes |
-| `L = C = 1` interdit | Le cas 1×1 n'est pas autorisé |
-
-### Exemples de Dimensions Valides
-
-| Lignes (L) | Colonnes (C) | Total | Paires |
-|------------|--------------|-------|--------|
+| L | C | Total | Paires |
+|---|---|-------|--------|
 | 3 | 3 | 9 | 4 |
 | 3 | 5 | 15 | 7 |
 | 3 | 7 | 21 | 10 |
@@ -55,11 +34,12 @@ Le plateau forme un rectangle de **L lignes × C colonnes** avec les contraintes
 
 ---
 
-## 🗂️ Structures de Données
+## 🗂️ Structures de données imposées
 
-### Table des Cartes `T[]`
+### Table des cartes `T` (taille `L×C`)
 
-Table à **une dimension** de taille `L × C` qui contient les valeurs des cartes.
+- Valeurs : `0` (Joker), `1..n` (chaque valeur deux fois), `-1` (carte retirée après paire trouvée).
+- Exemple (C = 7) :
 
 ```
 Position :  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
@@ -68,30 +48,79 @@ Valeur   :  1   7   9   4  10   2  10   6   9   3   7   8   1   5   2   5   6   
                                                                                     Joker
 ```
 
-### Table des Positions `P[]`
+### Table des positions `P`
 
-Table utilisée pour le **mélange aléatoire** des cartes.
-
-### Correspondance Position ↔ Coordonnées
-
-| Formule | Description |
-|---------|-------------|
-| `ligne = position / C` | Calcul de la ligne |
-| `colonne = position % C` | Calcul de la colonne |
-| `position = ligne × C + colonne` | Calcul de la position |
-
-#### Exemple avec C = 7
-
-La carte en position **11** :
-- Ligne : `11 / 7 = 1`
-- Colonne : `11 % 7 = 4`
-- Donc la carte est en **ligne 1, colonne 4**
+- Contient les indices `0..(L×C-1)` mélangés (Fisher-Yates).
+- Placement : Joker en `T[P[0]]`, carte 1 en `T[P[1]]` et `T[P[2]]`, carte 2 en `T[P[3]]` et `T[P[4]]`, etc.
+- Mise à jour : lorsqu'une paire est trouvée, ses indices sont supprimés de `P` (taille logique diminue).
 
 ---
 
-## 📊 Affichage du Plateau
+## 🧠 Algorithme de génération du plateau
 
-### Cartes Faces Cachées (Positions)
+1) Générer `P` = [0..R-1].
+2) Mélanger `P` (Fisher-Yates).
+3) Remplir `T` : Joker puis paires successives selon `P`.
+
+Exemple :
+
+```
+P initial  : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+P mélangé  : [19, 12, 0, 14, 5, 9, 17, 20, 3, 13, 15, 16, 7, 10, 1, 11, 18, 8, 2, 6, 4]
+Remplissage: T[19]=0, T[12]=1, T[0]=1, T[14]=2, T[5]=2, ...
+```
+
+---
+
+## 🎮 Déroulement d'un tour
+
+1) Le joueur choisit une première position (carte visible).
+2) Si c'est le Joker (`0`) : le tour s'arrête, permutation Joker (voir ci-dessous), joueur suivant.
+3) Sinon, choix d'une seconde carte.
+4) Si la seconde carte est le Joker : permutation et fin de tour.
+5) Comparaison :
+   - Paires identiques : score +1, cartes mises à `-1` dans `T` et retirées de `P`, le joueur rejoue.
+   - Différentes : cartes visibles 5 s puis recachées, tour suivant.
+
+### Algorithme du Joker
+
+- Joker retourné en position `i` :
+  1. Le joueur passe.
+  2. Tirage `r` aléatoire dans les cartes restantes (`0..R-1`).
+  3. Permutation de `T[i]` (Joker) avec `T[r]`.
+  4. `P` est **inchangé**.
+
+---
+
+## 🤖 Bot (IA sans triche)
+
+- Pas d'accès direct à `T` caché : il joue avec sa propre mémoire des cartes vues.
+- Mémoire : (position, valeur) ajoutée lors des révélations ; suppression lors d'une paire validée ; correction possible si Joker a déplacé une carte.
+- Stratégie :
+  1. Si deux positions connues identiques : les jouer en priorité.
+  2. Sinon, choix prudent tenant compte des infos possiblement périmées par le Joker.
+  3. Par défaut, tirage aléatoire contrôlé.
+
+### Structures minimales
+
+```c
+typedef struct {
+    char pseudo[50];
+    int score;
+    int estBot; // 1 si bot
+} Joueur;
+
+typedef struct {
+    int position;
+    int valeur;
+} Memoire;
+```
+
+---
+
+## 📊 Affichage du plateau
+
+Cartes cachées :
 
 ```
      0    1    2    3    4    5    6
@@ -101,7 +130,7 @@ La carte en position **11** :
  2 |  #    #    #    #    #    #    #
 ```
 
-### Cartes Faces Visibles (Valeurs)
+Cartes visibles :
 
 ```
      0    1    2    3    4    5    6
@@ -111,228 +140,53 @@ La carte en position **11** :
  2 |  2    5    6    3    8    0    4
 ```
 
-### Légende de l'Affichage
-
-| Symbole | Signification |
-|---------|---------------|
-| `#` | Carte face cachée |
-| `.` | Carte retirée (paire trouvée) |
-| `0-n` | Valeur de la carte (0 = Joker) |
+Légende : `#` carte cachée, `.` carte retirée, `0` Joker, `1..n` valeurs des paires.
 
 ---
 
-## 🎮 Modes de Jeu Disponibles
+## 🔧 Compilation et exécution
 
-### 1. Mode Multijoueur (2-4 joueurs)
-
-- a faire
-
----
-
-## 🧠 Algorithme de Génération Aléatoire
-
-### Étapes
-
-1. **Création** de la table des positions `P[]` avec les valeurs `0` à `R-1`
-2. **Mélange** de `P[]` avec l'algorithme de Fisher-Yates
-3. **Remplissage** de la table des cartes `T[]` :
-   - Joker en position `P[0]`
-   - Carte 1 en positions `P[1]` et `P[2]`
-   - Carte 2 en positions `P[3]` et `P[4]`
-   - ... et ainsi de suite
-
-### Exemple de Génération
-
-```
-Étape 1 - P initial :
-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-
-Étape 2 - P après mélange :
-[19, 12, 0, 14, 5, 9, 17, 20, 3, 13, 15, 16, 7, 10, 1, 11, 18, 8, 2, 6, 4]
-
-Étape 3 - Table T résultante :
-- T[19] = 0 (Joker)
-- T[12] = 1, T[0] = 1
-- T[14] = 2, T[5] = 2
-- ...
-```
-
----
-
-## 🔧 Compilation et Exécution
-
-### Prérequis
-
-- Compilateur C (GCC recommandé)
-- Terminal/Console
-
-### Compilation
+- Prérequis : GCC (ou équivalent) et terminal.
+- Compilation (exemple) :
 
 ```bash
-gcc -o memoryx MEMORYX.c
+gcc -Wall -Wextra -o memoryx MEMORYX.c chrono.c color.c nb_aleatoire.c
 ```
 
-### Exécution
+- Exécution :
 
 ```bash
 ./memoryx
 ```
 
----
-
-## 📁 Structure des Fichiers
-
-```
-SAE1.02/
-├── MEMORYX.c        # Code source principal du jeu
-├── README.md        # Documentation (ce fichier)
-├── chrono.c         # Fonctions de chronométrage
-├── color.c          # Gestion des couleurs terminal
-└── nb_aleatoire.c   # Générateur de nombres aléatoires
-```
+Au lancement : saisie de `L` et `C` (impairs), choix du mode (Humain/Humain, Humain/Bot, Solitaire) et ordre de passage.
 
 ---
 
-## 🛠️ Dépendances et Bibliothèques
+## 📁 Organisation du dépôt
 
-### Bibliothèques Standard C
-
-| Bibliothèque | Utilisation |
-|--------------|-------------|
-| `<stdio.h>` | Entrées/sorties (printf, scanf) |
-| `<stdlib.h>` | Allocation mémoire (malloc, free), rand() |
-| `<string.h>` | Manipulation de chaînes (strcpy, strcspn) |
-| `<time.h>` | Initialisation du générateur aléatoire (srand) |
-
-### Fichiers Auxiliaires (Optionnels)
-
-| Fichier | Description |
-|---------|-------------|
-| `chrono.c` | Mesure du temps de jeu |
-| `color.c` | Affichage coloré dans le terminal |
-| `nb_aleatoire.c` | Fonctions personnalisées pour l'aléatoire |
-
----
-
-## 📝 Structures du Code
-
-### Structure Joueur
-
-```c
-typedef struct {
-    char pseudo[50];    // Nom du joueur
-    int score;          // Nombre de paires trouvées
-    int estBot;         // 1 si c'est le bot, 0 sinon
-} Joueur;
 ```
-
-### Structure Mémoire (pour le Bot)
-
-```c
-typedef struct {
-    int position;       // Position de la carte vue
-    int valeur;         // Valeur de la carte
-} Memoire;
+SAE1.02.25/
+├── MEMORYX.c        # Code principal du jeu
+├── chrono.c         # Chronométrage
+├── color.c          # Couleurs terminal
+├── nb_aleatoire.c   # Générateur aléatoire
+└── README.md        # Ce document
 ```
 
 ---
 
-## 🎲 Déroulement d'une Partie
+## 🔢 Formules utiles
 
-```
-┌─────────────────────────────────────┐
-│  1. Choix du mode de jeu            │
-├─────────────────────────────────────┤
-│  2. Configuration du plateau (L×C)  │
-├─────────────────────────────────────┤
-│  3. Saisie des pseudos              │
-├─────────────────────────────────────┤
-│  4. Génération aléatoire du plateau │
-├─────────────────────────────────────┤
-│  5. Boucle de jeu :                 │
-│     - Affichage du plateau          │
-│     - Choix de 2 cartes             │
-│     - Vérification paire/Joker      │
-│     - Mise à jour des scores        │
-├─────────────────────────────────────┤
-│  6. Fin de partie (1 carte restante)│
-├─────────────────────────────────────┤
-│  7. Affichage du gagnant            │
-└─────────────────────────────────────┘
-```
-
----
-
-## 💡 Exemple de Partie
-
-```
-╔═══════════════════════════════════════╗
-║         BIENVENUE DANS MÉMORYX        ║
-╠═══════════════════════════════════════╣
-║  1. Mode Multijoueur (2-4 joueurs)    ║
-║  2. Mode Solitaire                    ║
-║  3. Jouer contre le Bot               ║
-║  4. Afficher les règles               ║
-║  5. Quitter                           ║
-╚═══════════════════════════════════════╝
-Votre choix : 1
-
-=== MODE MULTIJOUEUR ===
-Entrez le nombre de lignes (impair, >= 3) : 3
-Entrez le nombre de colonnes (impair, >= 3) : 5
-Nombre de joueurs (2 à 4) : 2
-Pseudo du joueur 1 : Alice
-Pseudo du joueur 2 : Bob
-
-===== Tour de Alice (Score: 0) =====
-
-     0    1    2    3    4
-   -------------------------
- 0 |  #    #    #    #    #
- 1 |  #    #    #    #    #
- 2 |  #    #    #    #    #
-
-Alice, entrez une position (0 à 14) : 3
-
-Carte en position 3 : 5
-
-     0    1    2    3    4
-   -------------------------
- 0 |  #    #    #    5    #
- 1 |  #    #    #    #    #
- 2 |  #    #    #    #    #
-
-Alice, entrez une position (0 à 14) : 11
-
-Carte en position 11 : 5
-
-*** PAIRE TROUVÉE ! Alice marque 1 point ! ***
-Alice rejoue !
-```
-
----
-
-## 🔢 Formules Mathématiques
-
-### Calcul du nombre de paires
-
-$$n = \frac{L \times C - 1}{2}$$
-
-### Conversion position → coordonnées
-
-$$\text{ligne} = \lfloor \frac{\text{position}}{C} \rfloor$$
-
-$$\text{colonne} = \text{position} \mod C$$
-
-### Conversion coordonnées → position
-
-$$\text{position} = \text{ligne} \times C + \text{colonne}$$
+- Paires : $n = \frac{L \times C - 1}{2}$
+- Coordonnées : $\text{ligne} = \lfloor \frac{\text{position}}{C} \rfloor$, $\text{colonne} = \text{position} \bmod C$
+- Position : $\text{position} = \text{ligne} \times C + \text{colonne}$
 
 ---
 
 ## 👨‍💻 Auteur
 
-Projet réalisé dans le cadre de la **SAE 1.02 - Initiation au développement**
+Projet réalisé dans le cadre de la **SAE 1.02 / 1.2 - Initiation au développement**
 
 IUT de Metz - Département Informatique - 2025/2026
 
