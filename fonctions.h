@@ -6,9 +6,11 @@
 #ifndef FONCTIONS_H
 #define FONCTIONS_H
 
+#include <time.h>
+
 #define JOKER 0
 #define CARTE_RETIREE -1
-#define MAX_CARTES 121
+#define MAX_CARTES 441
 #define MAX_PSEUDO 50
 
 /* Couleurs ANSI */
@@ -41,6 +43,7 @@ typedef struct {
     int R;                /* Cartes restantes */
     int coups;            /* Nombre de coups (solitaire) */
     int tour;             /* Numéro du tour */
+    time_t tempsDebut;    /* Temps de début (solitaire) */
     Joueur joueurs[2];
     int nbJoueurs;
     int joueurActuel;

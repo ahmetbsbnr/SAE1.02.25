@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 #include "fonctions.h"
 
 
@@ -23,9 +24,9 @@ void afficherMenu(void) {
 }
 
 int configurerPlateau(int *L, int *C) {
-    printf("Lignes (3,5,7,9,11) : ");
+    printf("Lignes (impair, 3-21) : ");
     scanf("%d", L);
-    printf("Colonnes (3,5,7,9,11) : ");
+    printf("Colonnes (impair, 3-21) : ");
     scanf("%d", C);
     
     if (!dimensionsValides(*L, *C)) {
@@ -58,14 +59,14 @@ void tourHumain(Partie *p) {
     if (val1 == JOKER) {
         printf("C'est le JOKER !\n");
         afficherPlateau(p, pos1, -1);
-        sleep(2);
+        sleep(5);
         permuterJoker(p, pos1);
-        sleep(2);
+        sleep(5);
         return;
     }
     
     afficherPlateau(p, pos1, -1);
-    sleep(2);
+    sleep(5);
     
     /* Carte 2 */
     do {
@@ -83,14 +84,14 @@ void tourHumain(Partie *p) {
     if (val2 == JOKER) {
         printf("C'est le JOKER !\n");
         afficherPlateau(p, pos1, pos2);
-        sleep(2);
+        sleep(5);
         permuterJoker(p, pos2);
-        sleep(2);
+        sleep(5);
         return;
     }
     
     afficherPlateau(p, pos1, pos2);
-    sleep(2);
+    sleep(5);
     
     if (val1 == val2) {
         printf("PAIRE TROUVEE !\n");
@@ -103,14 +104,15 @@ void tourHumain(Partie *p) {
         
         j->score++;
         afficherScores(p);
-        sleep(2);
+        sleep(5);
         
         if (!partieTerminee(p)) {
             tourHumain(p);
         }
     } else {
         printf("Pas de paire.\n");
-        sleep(2);
+        afficherScores(p);
+        sleep(5);
     }
 }
 
@@ -158,6 +160,7 @@ int main(void) {
         initialiserPlateau(&partie, L, C);
         partie.coups = 0;
         partie.tour = 0;
+        partie.tempsDebut = time(NULL);
         
         configurerJoueurs(&partie, choix == 1);
         initialiserMemoire(&partie.memoire);

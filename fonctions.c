@@ -22,8 +22,9 @@ int aleatoire(int min, int max) {
 
 void melangerTableau(int t[], int taille) {
     int i, j, temp;
-    for (i = taille - 1; i > 0; i--) {
-        j = aleatoire(0, i);
+    /* Mélange simple : échanger chaque case avec une position aléatoire */
+    for (i = 0; i < taille; i++) {
+        j = aleatoire(0, taille - 1);
         temp = t[i];
         t[i] = t[j];
         t[j] = temp;
@@ -32,8 +33,8 @@ void melangerTableau(int t[], int taille) {
 
 int dimensionsValides(int L, int C) {
     return (L % 2 == 1) && (C % 2 == 1) && 
-           (L >= 3) && (L <= 11) && 
-           (C >= 3) && (C <= 11);
+           (L >= 3) && (L <= 21) && 
+           (C >= 3) && (C <= 21);
 }
 
 /* ==================== PLATEAU ==================== */
@@ -79,14 +80,14 @@ void afficherTableauRetourne(Partie *p) {
     int i, j, k;
     
     printf("\n*** TRICHE ***\n");
-    printf("      ");
-    for (j = 1; j <= p->C; j++) printf("  %d  ", j);
+    printf("     ");
+    for (j = 1; j <= p->C; j++) printf(" %3d ", j);
     printf("\n     +");
     for (j = 0; j < p->C; j++) printf("-----");
     printf("+\n");
     
     for (i = 0; i < p->L; i++) {
-        printf("  %d  |", i + 1);
+        printf(" %2d  |", i + 1);
         for (j = 0; j < p->C; j++) {
             k = i * p->C + j;
             if (p->T[k] == CARTE_RETIREE) {
@@ -94,7 +95,7 @@ void afficherTableauRetourne(Partie *p) {
             } else if (p->T[k] == JOKER) {
                 printf(" JK  ");
             } else {
-                printf("  %2d ", p->T[k]);
+                printf(" %3d ", p->T[k]);
             }
         }
         printf("|\n");
@@ -112,14 +113,14 @@ void afficherPlateau(Partie *p, int pos1, int pos2) {
     afficherTableauRetourne(p);
     
     /* Tableau de jeu */
-    printf("\n      ");
-    for (j = 1; j <= p->C; j++) printf("  %d  ", j);
+    printf("\n     ");
+    for (j = 1; j <= p->C; j++) printf(" %3d ", j);
     printf("\n     +");
     for (j = 0; j < p->C; j++) printf("-----");
     printf("+\n");
     
     for (i = 0; i < p->L; i++) {
-        printf("  %d  |", i + 1);
+        printf(" %2d  |", i + 1);
         for (j = 0; j < p->C; j++) {
             k = i * p->C + j;
             if (p->T[k] == CARTE_RETIREE) {
@@ -128,7 +129,7 @@ void afficherPlateau(Partie *p, int pos1, int pos2) {
                 if (p->T[k] == JOKER) {
                     printf(" %sJK%s  ", BLEU, RESET);
                 } else {
-                    printf(" %s%2d%s  ", BLEU, p->T[k], RESET);
+                    printf(" %s%3d%s ", BLEU, p->T[k], RESET);
                 }
             } else {
                 printf("  ?  ");
@@ -236,9 +237,18 @@ void joueurSuivant(Partie *p) {
 void afficherScores(Partie *p) {
     int i;
     int n = (p->L * p->C - 1) / 2;
+    int tempsEcoule;
     
-    printf("\nPaires: %d/%d | Coups: %d\n", 
+    printf("\nPaires: %d/%d | Coups: %d", 
            p->joueurs[0].score + (p->nbJoueurs == 2 ? p->joueurs[1].score : 0), n, p->coups);
+    
+    /* Afficher le temps écoulé en mode solitaire */
+    if (p->nbJoueurs == 1) {
+        tempsEcoule = (int)(time(NULL) - p->tempsDebut);
+        printf(" | Temps: %02d:%02d", tempsEcoule / 60, tempsEcoule % 60);
+    }
+    printf("\n");
+    
     for (i = 0; i < p->nbJoueurs; i++) {
         printf("%s: %d  ", p->joueurs[i].pseudo, p->joueurs[i].score);
     }
@@ -247,15 +257,18 @@ void afficherScores(Partie *p) {
 
 void afficherGagnant(Partie *p) {
     int n = (p->L * p->C - 1) / 2;
+    int tempsTotal;
     
     printf("\n*************************\n");
     printf("*    FIN DE PARTIE !    *\n");
     printf("*************************\n\n");
     
     if (p->nbJoueurs == 1) {
+        tempsTotal = (int)(time(NULL) - p->tempsDebut);
         printf("Bravo %s !\n", p->joueurs[0].pseudo);
         printf("Paires trouvees : %d/%d\n", p->joueurs[0].score, n);
         printf("Nombre de coups : %d\n", p->coups);
+        printf("Temps total : %02d:%02d\n", tempsTotal / 60, tempsTotal % 60);
     } else {
         printf("%s : %d paires\n", p->joueurs[0].pseudo, p->joueurs[0].score);
         printf("%s : %d paires\n", p->joueurs[1].pseudo, p->joueurs[1].score);
@@ -382,15 +395,15 @@ int tourBot(Partie *p) {
     
     if (val1 == JOKER) {
         afficherPlateau(p, pos1, -1);
-        sleep(2);
+        sleep(5);
         permuterJoker(p, pos1);
         oublierCarte(&p->memoire, pos1);
-        sleep(2);
+        sleep(5);
         return 0;
     }
     
     afficherPlateau(p, pos1, -1);
-    sleep(2);
+    sleep(5);
     
     /* Deuxième carte */
     if (paire && positionValide(p, pos2)) {
@@ -410,15 +423,15 @@ int tourBot(Partie *p) {
     
     if (val2 == JOKER) {
         afficherPlateau(p, pos1, pos2);
-        sleep(2);
+        sleep(5);
         permuterJoker(p, pos2);
         oublierCarte(&p->memoire, pos2);
-        sleep(2);
+        sleep(5);
         return 0;
     }
     
     afficherPlateau(p, pos1, pos2);
-    sleep(2);
+    sleep(5);
     
     if (val1 == val2) {
         printf("Bot trouve une paire !\n");
@@ -426,11 +439,13 @@ int tourBot(Partie *p) {
         oublierCarte(&p->memoire, pos1);
         oublierCarte(&p->memoire, pos2);
         p->joueurs[p->joueurActuel].score++;
-        sleep(2);
+        afficherScores(p);
+        sleep(5);
         return 1;
     }
     
     printf("Pas de paire.\n");
-    sleep(2);
+    afficherScores(p);
+    sleep(5);
     return 0;
 }
