@@ -83,7 +83,7 @@ void tourHumain(Partie *p) {
     
     if (val2 == JOKER) {
         printf("C'est le JOKER !\n");
-        afficherPlateau(p, pos1, pos2);
+        afficherPlateau(p, pos1, pos2); 
         sleep(5);
         permuterJoker(p, pos2);
         sleep(5);

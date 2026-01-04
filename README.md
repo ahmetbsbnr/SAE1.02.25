@@ -292,6 +292,60 @@ if (val == JOKER) {
 
 ---
 
+## Tout les Fonctions
+
+### 📁 fonctions.c
+
+#### Utilitaires
+| Fonction | Description |
+|----------|-------------|
+| `initialiserAleatoire()` | Initialise le générateur de nombres aléatoires avec `srand(time(NULL))` |
+| `aleatoire(int min, int max)` | Retourne un entier aléatoire entre min et max inclus |
+| `melangerTableau(int t[], int taille)` | Mélange un tableau en échangeant chaque élément avec une position aléatoire |
+| `dimensionsValides(int L, int C)` | Vérifie que L et C sont impairs et compris entre 3 et 21 |
+
+#### Plateau
+| Fonction | Description |
+|----------|-------------|
+| `initialiserPlateau(Partie *p, int L, int C)` | Génère le plateau : P[i]=i → mélanger P → T[P[0]]=Joker → paires → reset P |
+| `afficherTableauRetourne(Partie *p)` | Affiche le tableau TRICHE avec toutes les cartes visibles |
+| `afficherPlateau(Partie *p, int pos1, int pos2)` | Affiche le plateau de jeu avec les cartes sélectionnées en bleu |
+| `positionValide(Partie *p, int pos)` | Vérifie si une position est valide et non retirée |
+| `permuterJoker(Partie *p, int posJoker)` | Échange le Joker avec une carte aléatoire parmi P : r=aleatoire(0,R-1), swap T[posJoker]↔T[P[r]] |
+| `retirerPaire(Partie *p, int pos1, int pos2)` | Retire une paire : T[pos]=-1, supprime de P, R-=2 |
+| `partieTerminee(Partie *p)` | Retourne 1 si R ≤ 1 (plus de paires à trouver) |
+
+#### Joueurs
+| Fonction | Description |
+|----------|-------------|
+| `configurerJoueurs(Partie *p, int modeDuel)` | Configure les joueurs selon le mode (duel/solitaire, humain/bot) |
+| `joueurSuivant(Partie *p)` | Passe au joueur suivant en mode duel |
+| `afficherScores(Partie *p)` | Affiche les scores + temps écoulé (mode solitaire) |
+| `afficherGagnant(Partie *p)` | Affiche le gagnant et les statistiques de fin de partie |
+| `saisirPosition(Partie *p)` | Saisit et valide les coordonnées ligne/colonne du joueur |
+
+#### Bot
+| Fonction | Description |
+|----------|-------------|
+| `initialiserMemoire(MemoireBot *m)` | Initialise la mémoire du bot (nbCartes = 0) |
+| `memoriserCarte(MemoireBot *m, int pos, int val)` | Mémorise une carte vue (sauf le Joker) |
+| `oublierCarte(MemoireBot *m, int pos)` | Oublie une carte (après retrait ou mouvement du Joker) |
+| `chercherPaire(MemoireBot *m, int *p1, int *p2)` | Cherche une paire dans la mémoire du bot |
+| `chercherValeur(MemoireBot *m, int val, int exclue)` | Cherche une carte de valeur val dans la mémoire (exclut une position) |
+| `tourBot(Partie *p)` | Gère un tour complet du bot : mémoire → choix → jouer → mémoriser |
+
+### 📁 MEMORYX.c
+
+| Fonction | Description |
+|----------|-------------|
+| `afficherMenu()` | Affiche le menu principal avec les modes de jeu |
+| `configurerPlateau(int *L, int *C)` | Demande et valide les dimensions du plateau |
+| `tourHumain(Partie *p)` | Gère un tour complet d'un joueur humain (saisie, affichage, vérification) |
+| `boucleJeu(Partie *p)` | Boucle principale : alterne les joueurs jusqu'à fin de partie |
+| `main()` | Point d'entrée : menu, configuration, lancement de la partie |
+
+---
+
 ## 👥 Auteurs
 
 - [Ahmet]
@@ -300,8 +354,9 @@ if (val == JOKER) {
 
 ## 📅 Date de soutenance
 
-Semaine du **2026**
+**2026**
 
 ---
 
 *IUT de Metz - Département Informatique*
+
