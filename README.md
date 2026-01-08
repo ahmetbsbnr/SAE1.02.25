@@ -1,362 +1,232 @@
-# 🎴 MÉMORYX
+# 🎴 MÉMORYX - SAE 1.02 / 1.2
 
-## SAE 1.02 - IUT de Metz - Département Informatique - 2025/2026
-
----
-
-## 📝 Description
-
-MÉMORYX est une variante du jeu Memory classique avec une carte **Joker** qui ajoute une dimension stratégique au jeu. Quand le Joker est retourné, il est permuté aléatoirement avec une autre carte, rendant le jeu plus imprévisible !
+Documentation consolidée pour le projet **Mémoryx** (SAE 1.02 / 2025-2026) 
 
 ---
 
-## 🎯 Règles du jeu
+## 🎯 Objectifs et modes
 
-1. Les cartes sont disposées faces cachées sur un plateau de L × C cases
-2. Un joueur retourne deux cartes :
-   - **Si identiques** : il marque 1 point et rejoue
-   - **Sinon** : les cartes sont retournées face cachée, joueur suivant
-3. **Le Joker (valeur 0)** : quand il est retourné, le joueur passe son tour et le Joker est échangé avec une autre carte aléatoire
-4. Le gagnant est celui qui a trouvé le plus de paires
+- **Duel** : gagner en découvrant le plus de paires.
+- **Solitaire** : trouver toutes les paires en un minimum de temps.
+- Modes disponibles :
+  - `1` Humain vs Humain
+  - `2` Humain vs Bot
+  - `3` Solitaire (Humain seul)
+  - `4` Solitaire Bot (Demo)
+  - `0` Mode Triche (affiche toutes les cartes)
+  - `5` Quitter
 
 ---
 
-## 📁 Structure du projet
+## ⚙️ Paramètres et contraintes du plateau
+
+- Plateau de **L lignes** × **C colonnes** avec `L` et `C` impairs, `L × C = 2n + 1` (n paires + 1 Joker), cas `1×1` interdit.
+- Nombre de paires : $n = \frac{L \times C - 1}{2}$.
+- Conversion position ↔ coordonnées (stockage 1D) :
+  - ligne = position div C
+  - colonne = position mod C
+  - position = ligne × C + colonne
+
+### Exemples de dimensions valides
+
+| L | C | Total | Paires |
+|---|---|-------|--------|
+| 3 | 3 | 9 | 4 |
+| 3 | 5 | 15 | 7 |
+| 3 | 7 | 21 | 10 |
+| 5 | 5 | 25 | 12 |
+| 5 | 7 | 35 | 17 |
+| 7 | 7 | 49 | 24 |
+
+---
+
+## 🗂️ Structures de données imposées
+
+### Table des cartes `T` (taille `L×C`)
+
+- Valeurs : `0` (Joker), `1..n` (chaque valeur deux fois), `-1` (carte retirée après paire trouvée).
+- Exemple (C = 7) :
+
+```
+Position :  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
+Valeur   :  1   7   9   4  10   2  10   6   9   3   7   8   1   5   2   5   6   3   8   0   4
+                                                                                      ↑
+                                                                                    Joker
+```
+
+### Table des positions `P`
+
+- Contient les indices `0..(L×C-1)` mélangés (Fisher-Yates).
+- Placement : Joker en `T[P[0]]`, carte 1 en `T[P[1]]` et `T[P[2]]`, carte 2 en `T[P[3]]` et `T[P[4]]`, etc.
+- Mise à jour : lorsqu'une paire est trouvée, ses indices sont supprimés de `P` (taille logique diminue).
+
+---
+
+## 🧠 Algorithme de génération du plateau
+
+1) Générer `P` = [0..R-1].
+2) Mélanger `P` (Fisher-Yates).
+3) Remplir `T` : Joker puis paires successives selon `P`.
+
+Exemple :
+
+```
+P initial  : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+P mélangé  : [19, 12, 0, 14, 5, 9, 17, 20, 3, 13, 15, 16, 7, 10, 1, 11, 18, 8, 2, 6, 4]
+Remplissage: T[19]=0, T[12]=1, T[0]=1, T[14]=2, T[5]=2, ...
+```
+
+---
+
+## 🎮 Déroulement d'un tour
+
+1) Le joueur choisit une première position (carte visible).
+2) Si c'est le Joker (`0`) : le tour s'arrête, permutation Joker (voir ci-dessous), joueur suivant.
+3) Sinon, choix d'une seconde carte.
+4) Si la seconde carte est le Joker : permutation et fin de tour.
+5) Comparaison :
+   - Paires identiques : score +1, cartes mises à `-1` dans `T` et retirées de `P`, le joueur rejoue.
+   - Différentes : cartes visibles 5 s puis recachées, tour suivant.
+
+### Algorithme du Joker
+
+- Joker retourné en position `i` :
+  1. Le joueur passe.
+  2. Tirage `r` aléatoire dans les cartes restantes (`0..R-1`).
+  3. Permutation de `T[i]` (Joker) avec `T[r]`.
+  4. `P` est **inchangé**.
+
+---
+
+## 🤖 Bot (IA sans triche)
+
+- Pas d'accès direct à `T` caché : il joue avec sa propre mémoire des cartes vues.
+- Mémoire : (position, valeur) ajoutée lors des révélations ; suppression lors d'une paire validée ; correction possible si Joker a déplacé une carte.
+- Stratégie :
+  1. Si deux positions connues identiques : les jouer en priorité.
+  2. Sinon, choix prudent tenant compte des infos possiblement périmées par le Joker.
+  3. Par défaut, tirage aléatoire contrôlé.
+
+### Structures minimales
+
+```c
+typedef struct {
+    char pseudo[50];
+    int score;
+    int estBot; // 1 si bot
+} Joueur;
+
+typedef struct {
+    int position;
+    int valeur;
+} Memoire;
+```
+
+---
+
+## 📊 Affichage du plateau
+
+### Menu principal
+
+```
+ __  __  ______  __  __   ____   _____  __   __ __   __
+|  \/  ||  ____||  \/  | / __ \ |  __ \ \ \ / / \ \ / /
+| \  / || |__   | \  / || |  | || |__) | \ V /   \ V / 
+| |\/| ||  __|  | |\/| || |  | ||  _  /   | |     > <  
+| |  | || |____ | |  | || |__| || | \ \   | |    / . \ 
+|_|  |_||______||_|  |_| \____/ |_|  \_\  |_|   /_/ \_\
+             SAE 1.2 - IUT DE METZ
+
+=== CONFIGURATION ===
+Choisissez votre mode de jeu :
+  0. Activer le Mode Triche
+  1. Duel : Humain vs Humain
+  2. Duel : Humain vs Bot
+  3. Solitaire : Humain seul
+  4. Solitaire : Bot seul (Demo)
+  5. Quitter
+```
+
+### Cartes cachées
+
+```
+       0  1  2  3  4
+     +---------------+
+   0 | .  .  .  .  . |
+   1 | .  .  .  .  . |
+   2 | .  .  .  .  . |
+     +---------------+
+```
+
+### Cartes visibles (Mode Triche)
+
+```
+      [TRICHE]
+       0  1  2  3  4
+     +---------------+
+   0 |  1  7  9  4 10 |
+   1 |  6  9  3  7  8 |
+   2 |  2  5  6  0  4 |
+     +---------------+
+```
+
+Légende : `.` carte cachée, ` ` carte retirée, `0` Joker (rouge), `1..n` valeurs des paires (jaune)
+
+---
+
+## 🔧 Compilation et exécution
+
+- Prérequis : GCC (ou équivalent) et terminal.
+- Compilation :
+
+```bash
+gcc MEMORYX.c fonction.c -o memoryx
+```
+
+- Exécution :
+
+```bash
+./memoryx
+```
+
+Au lancement : menu de configuration avec choix du mode, option triche (activable/désactivable), puis saisie de `L` et `C` (impairs).
+
+---
+
+## 📁 Organisation du dépôt
 
 ```
 SAE1.02.25/
-├── MEMORYX.c      # Programme principal (main, menu, boucle de jeu)
-├── fonctions.h    # Prototypes + structures + constantes
-├── fonctions.c    # Toutes les fonctions du jeu
-├── test/          # Fichiers de test
-└── README.md      # Documentation
+├── MEMORYX.c        # Code principal du jeu (main)
+├── fonction.c       # Fonctions du jeu
+├── fonction.h       # Header avec structures et prototypes
+├── memoryx          # Exécutable compilé
+├── memoryx_25.pdf   # Sujet du projet
+├── README.md        # Ce document
+└── SAUV/            # Sauvegardes des anciennes versions
+    ├── MEMORYXcopy.c
+    ├── fonctioncopy.c
+    └── fonctioncopy.h
 ```
 
 ---
 
-## 🔧 Compilation et Exécution
+## 🔢 Formules utiles
 
-```bash
-gcc -o MEMORYX MEMORYX.c fonctions.c -Wall
-./MEMORYX
-```
-
----
-
-## 🎮 Modes de jeu
-
-| Mode | Description |
-|------|-------------|
-| **Duel** | Joueur 1 vs Joueur 2 (ou vs Bot) |
-| **Solitaire** | 1 joueur seul ou Bot |
+- Paires : $n = \frac{L \times C - 1}{2}$
+- Coordonnées : $\text{ligne} = \lfloor \frac{\text{position}}{C} \rfloor$, $\text{colonne} = \text{position} \bmod C$
+- Position : $\text{position} = \text{ligne} \times C + \text{colonne}$
 
 ---
 
-## 📐 Paramètres
+## 👨‍💻 Auteur
 
-- **L** : Nombre de lignes (impair, 3-21)
-- **C** : Nombre de colonnes (impair, 3-21)
-- Nombre de cartes = L × C = 2n + 1 (n paires + 1 Joker)
+Projet réalisé dans le cadre de la **SAE 1.02 / 1.2 - Initiation au développement**
 
----
-
-## 🔢 Structures de données
-
-### Table des cartes T (taille L × C)
-
-```c
-int T[MAX_CARTES];  /* Valeurs des cartes */
-```
-
-- `T[k]` = valeur de la carte en position k
-- `T[k] = 0` → Joker
-- `T[k] = -1` → Carte retirée
-- `T[k] = 1, 2, 3...` → Valeur de la carte
-
-### Table des positions P (taille R)
-
-```c
-int P[MAX_CARTES];  /* Positions des cartes restantes */
-```
-
-- `P[i]` = position de la i-ème carte restante
-- R = nombre de cartes restantes (décrémente quand paires trouvées)
-
-### Conversion position ↔ coordonnées
-
-```c
-/* Position → Ligne, Colonne */
-ligne = pos / C;
-colonne = pos % C;
-
-/* Ligne, Colonne → Position */
-pos = ligne * C + colonne;
-```
-
-### Structure Joueur
-
-```c
-typedef struct {
-    char pseudo[50];   /* Nom du joueur */
-    int score;         /* Nombre de paires trouvées */
-    int estBot;        /* 1 si bot, 0 sinon */
-} Joueur;
-```
-
-### Structure MemoireBot
-
-```c
-typedef struct {
-    int position;      /* Position de la carte */
-    int valeur;        /* Valeur mémorisée */
-} CarteMemoire;
-
-typedef struct {
-    CarteMemoire cartes[MAX_CARTES];
-    int nbCartes;      /* Nombre de cartes mémorisées */
-} MemoireBot;
-```
-
-### Structure Partie
-
-```c
-typedef struct {
-    int T[MAX_CARTES];     /* Table des cartes */
-    int P[MAX_CARTES];     /* Table des positions */
-    int L, C;              /* Dimensions */
-    int R;                 /* Cartes restantes */
-    int coups;             /* Nombre de coups */
-    int tour;              /* Numéro du tour */
-    time_t tempsDebut;     /* Chronomètre (solitaire) */
-    Joueur joueurs[2];
-    int nbJoueurs;
-    int joueurActuel;
-    MemoireBot memoire;
-} Partie;
-```
+IUT de Metz - Département Informatique - 2025/2026
 
 ---
 
-## 🎲 Algorithme de génération aléatoire
+## 📜 Licence
 
-### Étape 1 : Initialiser P
-
-```c
-for (i = 0; i < R; i++) {
-    P[i] = i;  /* P = {0, 1, 2, ..., R-1} */
-}
-```
-
-### Étape 2 : Mélanger P (permutation aléatoire)
-
-```c
-for (i = 0; i < R; i++) {
-    j = aleatoire(0, R - 1);
-    echanger(P[i], P[j]);
-}
-```
-
-### Étape 3 : Remplir T avec P mélangé
-
-```c
-T[P[0]] = JOKER;           /* Joker en position P[0] */
-
-carte = 1;
-for (i = 1; i < R; i += 2) {
-    T[P[i]] = carte;       /* Première carte de la paire */
-    T[P[i+1]] = carte;     /* Deuxième carte de la paire */
-    carte++;
-}
-```
-
-### Étape 4 : Réinitialiser P
-
-```c
-for (i = 0; i < R; i++) {
-    P[i] = i;  /* P redevient {0, 1, 2, ..., R-1} */
-}
-```
-
----
-
-## 🃏 Gestion du Joker
-
-Quand un joueur retourne le Joker en position `posJoker` :
-
-```c
-r = aleatoire(0, R - 1);     /* r aléatoire parmi les cartes restantes */
-posAlea = P[r];              /* Position de la carte à échanger */
-
-/* Permutation de T[posJoker] et T[posAlea] */
-temp = T[posJoker];
-T[posJoker] = T[posAlea];
-T[posAlea] = temp;
-```
-
-**Note** : On utilise `P[r]` pour garantir que l'échange se fait avec une carte encore présente sur le plateau.
-
----
-
-## 🗑️ Retrait d'une paire
-
-Quand une paire est trouvée en positions `pos1` et `pos2` :
-
-```c
-/* Marquer les cartes comme retirées dans T */
-T[pos1] = -1;
-T[pos2] = -1;
-
-/* Retirer ces positions de P */
-j = 0;
-for (i = 0; i < R; i++) {
-    if (P[i] != pos1 && P[i] != pos2) {
-        temp[j++] = P[i];
-    }
-}
-/* Mettre à jour P et R */
-P = temp;
-R = j;  /* R diminue de 2 */
-```
-
----
-
-## 🤖 Stratégie du Bot
-
-### 1. Le bot ne triche pas
-
-- Il n'a **pas accès** directement à la table T
-- Il utilise uniquement la table P pour choisir une position
-- Il mémorise les cartes **quand elles sont retournées**
-
-### 2. Structure de la mémoire
-
-```c
-MemoireBot memoire;
-memoire.cartes[i].position = pos;  /* Où est la carte */
-memoire.cartes[i].valeur = val;    /* Quelle valeur */
-```
-
-### 3. Algorithme de jeu
-
-```
-SI paire trouvée dans mémoire ALORS
-    jouer les deux positions de cette paire
-SINON
-    SI carte connue dans mémoire avec même valeur que carte 1 ALORS
-        jouer cette position
-    SINON
-        choisir aléatoirement parmi P
-    FIN SI
-FIN SI
-```
-
-### 4. Le bot peut se tromper
-
-Le Joker peut avoir bougé → la mémoire devient incorrecte !
-
-```c
-/* Le bot oublie une carte quand le Joker bouge */
-if (val == JOKER) {
-    oublierCarte(&memoire, pos);
-}
-```
-
----
-
-## 🎨 Affichage
-
-- **Tableau TRICHE** : toutes les cartes visibles (debug)
-- **Tableau de jeu** : cartes cachées `?`, sélectionnées en bleu
-- **Délai** : 5 secondes entre chaque action
-- **Scores** : affichés après chaque coup
-- **Temps** : affiché en mode solitaire (format MM:SS)
-
----
-
-## 📊 Fonctions principales
-
-| Fonction | Description |
-|----------|-------------|
-| `initialiserPlateau()` | Génère le plateau avec l'algorithme du sujet |
-| `afficherPlateau()` | Affiche le plateau avec cartes sélectionnées |
-| `permuterJoker()` | Échange le Joker avec une carte aléatoire |
-| `retirerPaire()` | Retire une paire de T et P |
-| `saisirPosition()` | Saisie et validation des coordonnées |
-| `tourHumain()` | Gère le tour d'un joueur humain |
-| `tourBot()` | Gère le tour du bot |
-| `memoriserCarte()` | Ajoute une carte à la mémoire du bot |
-| `oublierCarte()` | Retire une carte de la mémoire du bot |
-| `chercherPaire()` | Cherche une paire dans la mémoire |
-| `afficherScores()` | Affiche scores + temps |
-| `afficherGagnant()` | Affiche le vainqueur en fin de partie |
-
----
-
-## Tout les Fonctions
-
-### 📁 fonctions.c
-
-#### Utilitaires
-| Fonction | Description |
-|----------|-------------|
-| `initialiserAleatoire()` | Initialise le générateur de nombres aléatoires avec `srand(time(NULL))` |
-| `aleatoire(int min, int max)` | Retourne un entier aléatoire entre min et max inclus |
-| `melangerTableau(int t[], int taille)` | Mélange un tableau en échangeant chaque élément avec une position aléatoire |
-| `dimensionsValides(int L, int C)` | Vérifie que L et C sont impairs et compris entre 3 et 21 |
-
-#### Plateau
-| Fonction | Description |
-|----------|-------------|
-| `initialiserPlateau(Partie *p, int L, int C)` | Génère le plateau : P[i]=i → mélanger P → T[P[0]]=Joker → paires → reset P |
-| `afficherTableauRetourne(Partie *p)` | Affiche le tableau TRICHE avec toutes les cartes visibles |
-| `afficherPlateau(Partie *p, int pos1, int pos2)` | Affiche le plateau de jeu avec les cartes sélectionnées en bleu |
-| `positionValide(Partie *p, int pos)` | Vérifie si une position est valide et non retirée |
-| `permuterJoker(Partie *p, int posJoker)` | Échange le Joker avec une carte aléatoire parmi P : r=aleatoire(0,R-1), swap T[posJoker]↔T[P[r]] |
-| `retirerPaire(Partie *p, int pos1, int pos2)` | Retire une paire : T[pos]=-1, supprime de P, R-=2 |
-| `partieTerminee(Partie *p)` | Retourne 1 si R ≤ 1 (plus de paires à trouver) |
-
-#### Joueurs
-| Fonction | Description |
-|----------|-------------|
-| `configurerJoueurs(Partie *p, int modeDuel)` | Configure les joueurs selon le mode (duel/solitaire, humain/bot) |
-| `joueurSuivant(Partie *p)` | Passe au joueur suivant en mode duel |
-| `afficherScores(Partie *p)` | Affiche les scores + temps écoulé (mode solitaire) |
-| `afficherGagnant(Partie *p)` | Affiche le gagnant et les statistiques de fin de partie |
-| `saisirPosition(Partie *p)` | Saisit et valide les coordonnées ligne/colonne du joueur |
-
-#### Bot
-| Fonction | Description |
-|----------|-------------|
-| `initialiserMemoire(MemoireBot *m)` | Initialise la mémoire du bot (nbCartes = 0) |
-| `memoriserCarte(MemoireBot *m, int pos, int val)` | Mémorise une carte vue (sauf le Joker) |
-| `oublierCarte(MemoireBot *m, int pos)` | Oublie une carte (après retrait ou mouvement du Joker) |
-| `chercherPaire(MemoireBot *m, int *p1, int *p2)` | Cherche une paire dans la mémoire du bot |
-| `chercherValeur(MemoireBot *m, int val, int exclue)` | Cherche une carte de valeur val dans la mémoire (exclut une position) |
-| `tourBot(Partie *p)` | Gère un tour complet du bot : mémoire → choix → jouer → mémoriser |
-
-### 📁 MEMORYX.c
-
-| Fonction | Description |
-|----------|-------------|
-| `afficherMenu()` | Affiche le menu principal avec les modes de jeu |
-| `configurerPlateau(int *L, int *C)` | Demande et valide les dimensions du plateau |
-| `tourHumain(Partie *p)` | Gère un tour complet d'un joueur humain (saisie, affichage, vérification) |
-| `boucleJeu(Partie *p)` | Boucle principale : alterne les joueurs jusqu'à fin de partie |
-| `main()` | Point d'entrée : menu, configuration, lancement de la partie |
-
----
-
-## 👥 Auteurs
-
-- [Ahmet]
-
----
-
-## 📅 Date de soutenance
-
-**2026**
-
----
-
-*IUT de Metz - Département Informatique*
-
+Projet éducatif - Usage académique uniquement

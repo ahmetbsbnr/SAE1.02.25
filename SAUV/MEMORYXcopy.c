@@ -1,4 +1,4 @@
-#include "fonction.h"
+#include "fonctioncopy.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -16,53 +16,20 @@ void vider_buffer() {
 int main() {
     Jeu jeu;
     int L, C, choix_menu, p1, p2, tourTermine;
-    int modeTriche = 0; // 0 = désactivé, 1 = activé
     srand((unsigned int)time(NULL));
 
     // --- 1. MENU PRINCIPAL ---
-    do {
-        system("clear"); // ou system("cls") sous windows
-        afficher_banniere();
+    system("clear"); // ou system("cls") sous windows
+    afficher_banniere();
 
-        printf(BOLD "\n=== CONFIGURATION ===\n" RESET);
-        
-        // Afficher l'état du mode triche
-        if (modeTriche) {
-            printf(RED ">>> Mode de triche ACTIVE <<<\n" RESET);
-        }
-        
-        printf("Choisissez votre mode de jeu :\n");
-        if (modeTriche) {
-            printf(GREEN "  0. Desactiver le Mode Triche\n" RESET);
-        } else {
-            printf(RED "  0. Activer le Mode Triche\n" RESET);
-        }
-        printf("  1. Duel : Humain vs Humain\n");
-        printf("  2. Duel : Humain vs Bot\n");
-        printf("  3. Solitaire : Humain seul\n");
-        printf("  4. Solitaire : Bot seul (Demo)\n");
-        printf("  5. Quitter\n");
-        printf("Votre choix : ");
-        scanf("%d", &choix_menu);
-
-        // Gestion du quitter
-        if (choix_menu == 5) {
-            printf(GREEN "\nA bientot !\n" RESET);
-            return 0;
-        }
-
-        // Gestion du mode triche (bascule on/off)
-        if (choix_menu == 0) {
-            modeTriche = !modeTriche; // Bascule
-            if (modeTriche) {
-                printf(RED "\n>>> Mode de triche ACTIVE ! <<<\n" RESET);
-            } else {
-                printf(GREEN "\n>>> Mode de triche DESACTIVE ! <<<\n" RESET);
-            }
-            attendre(1);
-        }
-
-    } while (choix_menu == 0 || choix_menu < 1 || choix_menu > 4);
+    printf(BOLD "\n=== CONFIGURATION ===\n" RESET);
+    printf("Choisissez votre mode de jeu :\n");
+    printf("  1. Duel : Humain vs Humain\n");
+    printf("  2. Duel : Humain vs Bot\n");
+    printf("  3. Solitaire : Humain seul\n");
+    printf("  4. Solitaire : Bot seul (Demo)\n"); // Mode demandé
+    printf("Votre choix : ");
+    scanf("%d", &choix_menu);
 
     printf("\nConfiguration du plateau :\n");
     do {
@@ -116,9 +83,6 @@ int main() {
 
         // Affichage scores
         printf("--------------------------------------------------\n");
-        if (modeTriche) {
-            printf(RED " [MODE TRICHE ACTIVE]" RESET "\n");
-        }
         if (choix_menu > 2) { // Solitaires
              printf(" Mode Solitaire | Joueur : %s | Score : %d\n", j->pseudo, j->score);
         } else {
@@ -129,12 +93,7 @@ int main() {
         printf("--------------------------------------------------\n");
         printf("C'est au tour de : " BOLD "%s" RESET "\n", j->pseudo);
 
-        // Affichage du plateau (mode triche = toutes les cartes visibles)
-        if (modeTriche) {
-            afficher_plateau_triche(&jeu);
-        } else {
-            afficher_plateau(&jeu, -1, -1);
-        }
+        afficher_plateau(&jeu, -1, -1);
 
         // --- ETAPE 1 ---
         if (j->estBot) {
