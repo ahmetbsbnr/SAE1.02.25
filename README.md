@@ -1,6 +1,31 @@
-# 🎴 MÉMORYX - SAE 1.02 / 1.2
+# 🎴 MÉMORYX - SAE 1.02
 
-Documentation consolidée pour le projet **Mémoryx** (SAE 1.02 / 2025-2026) 
+Jeu de mémoire en C - SAE 1.02 / 2025-2026 - IUT de Metz
+
+---
+
+## 📁 Structure du projet
+
+```
+/workspaces/SAE1.02.25/
+├── memoryx.c       # Programme principal (main)
+├── memoryx.h       # Header principal avec structures
+├── tableau.c/h     # Fonctions plateau (preparer_jeu, initialiser_plateau...)
+├── bot.c/h         # Intelligence artificielle du bot
+├── affichage.c/h   # Fonctions d'affichage (plateau, scores, bannière)
+├── utils.c/h       # Utilitaires (attendre, effacer_ecran, saisir_position)
+├── DEV/            # Anciennes versions et fichiers de développement
+└── README.md       # Ce fichier
+```
+
+---
+
+## 🔧 Compilation et exécution
+
+```bash
+gcc memoryx.c tableau.c bot.c affichage.c utils.c -o memoryx
+./memoryx
+```
 
 ---
 
